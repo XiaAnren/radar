@@ -1,0 +1,32 @@
+# Radar Products.
+TREF:
+  label: "Total \\ Reflectivity"
+  unit: "dBZ"
+REF:
+  label: "Reflectivity"
+  unit: "dBZ"
+VEL:
+  label: "Doppler \\ Velocity"
+  unit: "m \\ s^{-1}"
+SW:
+  label: "Spectrum \\ Width"
+  unit: "m \\ s^{-1}"
+ZDR:
+  label: "Differential \\ Reflectivity"
+  unit: "dB"
+KDP:
+  label: "Specific \\ Differential \\ Phase"
+  unit: "^\\circ \\ km^{-1}"
+RHO:
+  label: "Cross \\ Correlation \\ Coefficient"
+  unit: null
+SQI:
+  label: "Signal \\ Quality \\ Index"
+  unit: null
+# WRF Variables.
+mdbz:
+  label: "Composite \\ Reflectivity"
+  unit: "dBZ"
+T2:
+  label: "Temperature_{2m}"
+  unit: "K"

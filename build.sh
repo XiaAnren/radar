@@ -1,0 +1,39 @@
+#!/bin/bash
+
+DATA="data/bzip2"
+
+mkdir -p "$DATA"
+
+cd "$DATA"
+mkdir 20241017 20241018 20250228 20250301 20250302 20250303
+
+cd 20241017
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/AD/UTC202410170000-10175959/ AD
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/QFL/UTC202410170000-10175959/ QFL
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/BH/UTC202410170000-10175959/ BH
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/ZS/UTC202410170000-10175959/ ZS
+
+cd ../20241018
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/AD/UTC202410180000-10185959/ AD
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/QFL/UTC202410180000-10185959/ QFL
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/BH/UTC202410180000-10185959/ BH
+ln -s /data3/gengruomei/radar/radarUTC202410170000-10195959/ZS/UTC202410180000-10185959/ ZS
+
+cd ../20250228
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/BH/20250228/ BH
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/ZS/20250228/ ZS
+
+cd ../20250301
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/BH/20250301/ BH
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/ZS/20250301/ ZS
+
+cd ../20250302
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/BH/20250302/ BH
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/ZS/20250302/ ZS
+
+cd ../20250303
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/BH/20250303/ BH
+ln -s /data3/gengruomei/radar/radarUTC202502281200-03031200/ZS/20250303/ ZS
+
+cd ..
+echo "Done."
