@@ -15,7 +15,7 @@ from shapely.ops import unary_union
 # Utilities.
 products = ["TREF", "REF", "VEL", "SW", "ZDR", "KDP", "RHO", "SQI"]
 varnames = ["mdbz", "T2"]
-msg = "Got {}, " + f"which should be {' / '.join(products + varnames)}."
+msg = f"Got {{}}, which should be {' / '.join(products + varnames)}."
 # Static Utilities.
 ProductType = Literal["TREF", "REF", "VEL", "SW", "ZDR", "KDP", "RHO", "SQI",
                       "mdbz", "T2"]
