@@ -40,7 +40,7 @@ def get_filename(filedict: dict[str, Path | str]) -> Path:
         return filepath / folder / filename
     if isinstance(filepath, str):
         return Path(filepath) / folder / filename
-    msg = f"Got {type(filepath)}, which should be Path / str."
+    msg = f"Got {type(filepath).__name__}, which should be Path / str."
     raise TypeError(msg)
 
 
