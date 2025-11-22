@@ -3,14 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import cmaps
 import matplotlib.colors as mcolors
 import numpy as np
 import yaml
 from geopandas import GeoDataFrame, GeoSeries, points_from_xy
+from netCDF4 import Dataset
 from shapely.ops import unary_union
+from wrf import get_cartopy, getvar, latlon_coords
+
+if TYPE_CHECKING:
+    import cartopy.crs as ccrs
+    from xarray import DataArray
 
 # Utilities.
 products = ["TREF", "REF", "VEL", "SW", "ZDR", "KDP", "RHO", "SQI"]
@@ -19,6 +25,24 @@ msg = f"Got {{}}, which should be {' / '.join(products + varnames)}."
 # Static Utilities.
 ProductType = Literal["TREF", "REF", "VEL", "SW", "ZDR", "KDP", "RHO", "SQI",
                       "mdbz", "T2"]
+
+
+def get_geometa(domain: int) -> tuple[tuple[DataArray], ccrs.Projection]:
+    """Get geographic coordinates and map projection from a geographic file.
+
+    Args:
+        domain (int): WRF domain number.
+
+    Returns:
+        tuple[tuple[DataArray], Projection]:
+            Latitude and longitude coordinates.
+            Cartopy projection object for map transformation.
+
+    """
+    filepath = Path("/public/home/premopr/data/GMODJOBS/GESDHYD/wps")
+    filename = f"geo_em.d{domain:02}.nc"
+    ncfile = Dataset(filepath / filename)
+    return latlon_coords(getvar(ncfile, "ter")), get_cartopy(wrfin=ncfile)
 
 
 def get_filename(filedict: dict[str, Path | str]) -> Path:
