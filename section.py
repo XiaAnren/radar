@@ -25,7 +25,7 @@ from matplotlib.axes import Axes
 from metpy.interpolate import cross_section
 from netCDF4 import Dataset
 from pandas import date_range
-from viztools import get_clabel, get_coverage, get_viztools
+from viztools import get_clabel, get_coverage, get_geometa, get_viztools
 from wrf import CoordPair
 from xarray.backends import NetCDF4DataStore
 
@@ -34,8 +34,8 @@ if TYPE_CHECKING:
 
     from geopandas import GeoSeries
 
-# Mosaic / Plot.
-name = "Plot"
+# Mosaic / Plot-Mosaic / Plot-Fusion.
+name = "Plot-Mosaic"
 # Date (format: YYYY-MM-DD).
 date = "2025-03-02"
 # Frequency (format: "[n]min" for minutes, "[n]H" for hours).
@@ -46,7 +46,7 @@ time = "2025-03-02 06:00:00"
 if name == "Mosaic":
     start, end = "06:00:00", "06:00:00"
 # Start & End.
-if name == "Plot":
+if "Plot" in name:
     start, end = CoordPair(lat=36, lon=117.5), CoordPair(lat=35.75, lon=119)
 
 # Preprocess.
@@ -125,7 +125,7 @@ def ax2ax(
             ylocs=[34.5, 34.75, 35, 35.25, 35.5, 35.75, 36, 36.25, 36.5],
         )
         ax.spines["geo"].set_linewidth(0.6)
-        ax.set_extent([117, 119.375, 34.425, 36.25 if is_2024 else 36.625])
+        ax.set_extent([117, 119.375, 34.4625, 36.25 if is_2024 else 36.625])
         ax.add_geometries(
             coverage.geometry,
             crs=ccrs.PlateCarree(),
@@ -152,7 +152,111 @@ def ax2ax(
     )
 
 
-def get_section(
+def fusion_section(
+    data: Dataset,
+    start: CoordPair,
+    end: CoordPair,
+) -> xr.Dataset:
+    """Extract a vertical cross-section from a dataset between two coordinates.
+
+    Args:
+        data (Dataset): Input dataset containing fusion reflectivity data.
+        start (CoordPair): Starting coordinate pair for the cross-section.
+        end (CoordPair): Ending coordinate pair for the cross-section.
+
+    Returns:
+        xr.Dataset: Dataset containing the vertical cross-section.
+
+    """
+    data = xr.open_dataset(NetCDF4DataStore(data)).squeeze("Time")
+
+    (lat, lon), _ = get_geometa(domain=3)
+    dims = {"vertical": "height", "south_north": "lat", "west_east": "lon"}
+    coords = {
+        "lat": lat.to_numpy().mean(axis=1),
+        "lon": lon.to_numpy().mean(axis=0),
+        "height": data.Level.to_numpy(),
+    }
+
+    data = data.rename(dims).assign_coords(coords)
+    data = data.drop_vars(("Times", "Level")).metpy.parse_cf()
+    return cross_section(data, (start.lat, start.lon), (end.lat, end.lon))
+
+
+@register("Plot-Fusion")
+def plot_fusion() -> None:
+    """Plot."""
+    is_2024 = time.year == 2024  # noqa: PLR2004
+
+    filepath = Path("data/fusion/MAX")
+    folder = time.strftime(r"%Y%m%d%H")
+    filename = f"{time.strftime(r'%Y-%m-%d_%H:%M:%S')}_DBZ_D3"
+
+    (lat, lon), _ = get_geometa(domain=3)
+
+    fusion = Dataset(filepath / folder / f"{filename}.nc")
+    reflectivity = np.nanmax(fusion.variables["dz"][0], axis=0)
+    section = fusion_section(fusion, start, end)
+
+    coverage = get_coverage(is_2024=is_2024)
+    proj = ccrs.AzimuthalEquidistant(118.25, 35.625)
+    cmap, ticks, norm = get_viztools("REF")
+    cmap.set_under("none")
+
+    fig = plt.figure(figsize=(12, 5))
+    subfigs = fig.subfigures(1, 2, wspace=-0.175)
+
+    subfigs[0].set_facecolor("none")
+    ax = subfigs[0].subplots(1, 1, subplot_kw={"projection": proj})
+    ax2ax(ax, "Fusion", coverage, is_2024=is_2024)
+    pcm = ax.pcolormesh(
+        lon,
+        lat,
+        reflectivity,
+        cmap=cmap,
+        norm=norm,
+        transform=ccrs.PlateCarree(),
+    )
+    ax.plot(
+        [start.lon, end.lon],
+        [start.lat, end.lat],
+        color="black",
+        linewidth=3,
+        transform=ccrs.PlateCarree(),
+    )
+    ax.text(
+        0.1575,
+        0.925,
+        time.strftime("%Y-%m-%d\n%H:%M:%S"),
+        ha="center",
+        va="center",
+        transform=ax.transAxes,
+        fontsize=16,
+        bbox={"facecolor": "white", "alpha": 0.5, "lw": 0},
+    )
+
+    subfigs[1].set_facecolor("none")
+    ax = subfigs[1].subplots(1, 1)
+    ax2ax(ax, "Cross-section", coverage, is_2024=is_2024)
+    ax.pcolormesh(
+        section["lat"].values,
+        section["height"].values,
+        section["dz"].values,
+        cmap=cmap,
+        norm=norm,
+    )
+
+    cbar = fig.colorbar(pcm, ax=ax, ticks=ticks, shrink=0.95, aspect=30)
+    cbar.set_label(get_clabel("REF"), fontsize=16)
+    cbar.ax.tick_params(labelsize=16)
+
+    savepath = Path(f"images/section/{time.strftime(r'%Y-%m-%d')}")
+    savepath.mkdir(parents=True, exist_ok=True)
+
+    fig.savefig(savepath / f"{filename}.png", bbox_inches="tight")
+
+
+def mosaic_section(
     data: Dataset,
     start: CoordPair,
     end: CoordPair,
@@ -168,21 +272,12 @@ def get_section(
         xr.Dataset: Dataset containing the vertical cross-section.
 
     """
-    data = xr.open_dataset(NetCDF4DataStore(data))
-
-    data = data.rename({"latitude": "lat", "longitude": "lon"})
-    data = data.assign_coords(crs=ccrs.PlateCarree())
-    data = data.metpy.parse_cf()
-
-    data["lat"].attrs = {"units": "degrees_north", "standard_name": "latitude"}
-    data["lon"].attrs = {"units": "degrees_east", "standard_name": "longitude"}
-    data["height"].attrs = {"units": "m", "standard_name": "height"}
-    data["REF"].attrs["grid_mapping"] = "crs"
+    data = xr.open_dataset(NetCDF4DataStore(data)).metpy.parse_cf()
     return cross_section(data, (start.lat, start.lon), (end.lat, end.lon))
 
 
-@register("Plot")
-def plot() -> None:
+@register("Plot-Mosaic")
+def plot_mosaic() -> None:
     """Plot."""
     is_2024 = time.year == 2024  # noqa: PLR2004
 
@@ -192,7 +287,7 @@ def plot() -> None:
 
     mosaic = Dataset(filepath / folder / f"{filename}.nc")
     reflectivity = np.nanmax(mosaic.variables["REF"][:], axis=0)
-    section = get_section(mosaic, start, end)
+    section = mosaic_section(mosaic, start, end)
 
     coverage = get_coverage(is_2024=is_2024)
     proj = ccrs.AzimuthalEquidistant(118.25, 35.625)
@@ -234,7 +329,7 @@ def plot() -> None:
     ax = subfigs[1].subplots(1, 1)
     ax2ax(ax, "Cross-section", coverage, is_2024=is_2024)
     ax.pcolormesh(
-        section["lat"].values,
+        section["latitude"].values,
         section["height"].values,
         section["REF"].values,
         cmap=cmap,
